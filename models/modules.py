@@ -6,6 +6,10 @@ import torch.nn as nn
 from torch.utils import model_zoo
 import copy
 import numpy as np
+
+import sys,os
+sys.path.append(os.path.dirname(__file__))
+
 import senet
 import resnet
 import densenet

@@ -13,7 +13,7 @@ import sobel
 from models import modules, net, resnet, densenet, senet
 
 parser = argparse.ArgumentParser(description='PyTorch DenseNet Training')
-parser.add_argument('--epochs', default=20, type=int,
+parser.add_argument('--epochs', default=5, type=int,
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int,
                     help='manual epoch number (useful on restarts)')
@@ -44,7 +44,7 @@ def define_model(is_resnet, is_densenet, is_senet):
 def main():
     global args
     args = parser.parse_args()
-    model = define_model(is_resnet=False, is_densenet=False, is_senet=True)
+    model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
  
     if torch.cuda.device_count() == 8:
         model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7]).cuda()
@@ -54,7 +54,8 @@ def main():
         batch_size = 32
     else:
         model = model.cuda()
-        batch_size = 8
+        #batch_size = 8
+        batch_size = 10
 
     cudnn.benchmark = True
     optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
@@ -82,7 +83,8 @@ def train(train_loader, model, optimizer, epoch):
     for i, sample_batched in enumerate(train_loader):
         image, depth = sample_batched['image'], sample_batched['depth']
 
-        depth = depth.cuda(async=True)
+        #depth = depth.cuda(async=True)
+        depth = depth.cuda()
         image = image.cuda()
         image = torch.autograd.Variable(image)
         depth = torch.autograd.Variable(depth)
@@ -113,7 +115,8 @@ def train(train_loader, model, optimizer, epoch):
 
         loss = loss_depth + loss_normal + (loss_dx + loss_dy)
 
-        losses.update(loss.data[0], image.size(0))
+        #losses.update(loss.data[0], image.size(0))
+        losses.update(loss.data.item(), image.size(0))
         loss.backward()
         optimizer.step()
 
