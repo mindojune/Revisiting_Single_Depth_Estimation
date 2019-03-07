@@ -26,7 +26,7 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
 
 def define_model(is_resnet, is_densenet, is_senet):
     if is_resnet:
-        original_model = resnet.resnet50(pretrained = True)
+        original_model = resnet.resnet50(pretrained = False)
         Encoder = modules.E_resnet(original_model) 
         model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
     if is_densenet:
@@ -55,7 +55,7 @@ def main():
     else:
         model = model.cuda()
         #batch_size = 8
-        batch_size = 10
+        batch_size = 11
 
     cudnn.benchmark = True
     optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
@@ -156,6 +156,7 @@ class AverageMeter(object):
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
+    filename = 'resnet_untrained.pth'
     torch.save(state, filename)
 
 
