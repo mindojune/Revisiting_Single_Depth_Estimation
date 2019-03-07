@@ -13,7 +13,8 @@ import sobel
 def main():
     model = define_model(is_resnet=False, is_densenet=False, is_senet=True)
     model = torch.nn.DataParallel(model).cuda()
-    model.load_state_dict(torch.load('./pretrained_model/model_senet'))
+    # model.load_state_dict(torch.load('./pretrained_model/model_senet'))
+    model.load_state_dict(torch.load('resnet_untrained.pth'))
 
     test_loader = loaddata.getTestingData(1)
     test(test_loader, model, 0.25)
@@ -35,7 +36,8 @@ def test(test_loader, model, thre):
     for i, sample_batched in enumerate(test_loader):
         image, depth = sample_batched['image'], sample_batched['depth']
 
-        depth = depth.cuda(async=True)
+        # depth = depth.cuda(async=True)
+        depth = depth.cuda()
         image = image.cuda()
 
         image = torch.autograd.Variable(image, volatile=True)
