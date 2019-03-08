@@ -1,7 +1,7 @@
 #
 data/
 pretrained_model/
-
+*.pth
 
 
 #led / optimized / DLL files
