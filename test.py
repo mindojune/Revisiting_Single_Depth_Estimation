@@ -14,7 +14,7 @@ def main():
     model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
     # model = torch.nn.DataParallel(model).cuda()
     # model.load_state_dict(torch.load('./pretrained_model/model_senet'))
-    model.load_state_dict(torch.load('checkpoint.pth'))
+    model.load_state_dict(torch.load('resnet_untrained.pth'))
 
     test_loader = loaddata.getTestingData(1)
     test(test_loader, model, 0.25)
