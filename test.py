@@ -8,14 +8,19 @@ import loaddata
 import util
 import numpy as np
 import sobel
-
+from collections import OrderedDict
 
 def main():
-    model = define_model(is_resnet=False, is_densenet=False, is_senet=True)
+    model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
     model = torch.nn.DataParallel(model).cuda()
     # model.load_state_dict(torch.load('./pretrained_model/model_senet'))
-    model.load_state_dict(torch.load('resnet_untrained.pth'))
-
+   # model.load_state_dict(torch.load('resnet_untrained.pth'))
+    state_dict = torch.load('resnet_untrained.pth')
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = k[7:] # remove 'module.' of dataparallel
+        new_state_dict[name]=v
+    model.load_state_dict(new_state_dict)
     test_loader = loaddata.getTestingData(1)
     test(test_loader, model, 0.25)
 
@@ -85,7 +90,7 @@ def test(test_loader, model, thre):
 
 def define_model(is_resnet, is_densenet, is_senet):
     if is_resnet:
-        original_model = resnet.resnet50(pretrained = True)
+        original_model = resnet.resnet50(pretrained = False)
         Encoder = modules.E_resnet(original_model) 
         model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
     if is_densenet:

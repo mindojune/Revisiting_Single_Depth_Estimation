@@ -11,6 +11,7 @@ import util
 import numpy as np
 import sobel
 from models import modules, net, resnet, densenet, senet
+import os
 
 parser = argparse.ArgumentParser(description='PyTorch DenseNet Training')
 parser.add_argument('--epochs', default=5, type=int,
@@ -61,12 +62,15 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
     train_loader = loaddata.getTrainingData(batch_size)
-
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    model_out_path = dir_path + '/model_output'
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch)
         train(train_loader, model, optimizer, epoch)
-    
-    save_checkpoint({'state_dict': model.state_dict()})
+        if not model_out_path.exists():
+           model_out_path.mkdir()
+        torch.save(model.state_dict(), model_out_path/ "model_epoch_{}.pth".format(epoch)) 
+  #  save_checkpoint({'state_dict': model.state_dict()})
 
 
 def train(train_loader, model, optimizer, epoch):
