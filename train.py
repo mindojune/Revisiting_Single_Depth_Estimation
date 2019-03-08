@@ -12,6 +12,7 @@ import numpy as np
 import sobel
 from models import modules, net, resnet, densenet, senet
 import os
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description='PyTorch DenseNet Training')
 parser.add_argument('--epochs', default=5, type=int,
@@ -27,7 +28,7 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
 
 def define_model(is_resnet, is_densenet, is_senet):
     if is_resnet:
-        original_model = resnet.resnet50(pretrained = False)
+        original_model = resnet.resnet50(pretrained = True)
         Encoder = modules.E_resnet(original_model) 
         model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
     if is_densenet:
@@ -64,11 +65,12 @@ def main():
     train_loader = loaddata.getTrainingData(batch_size)
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_out_path = dir_path + '/model_output'
+    model_out_path = Path(model_out_path)
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch)
-        train(train_loader, model, optimizer, epoch)
         if not model_out_path.exists():
            model_out_path.mkdir()
+        train(train_loader, model, optimizer, epoch)
         torch.save(model.state_dict(), model_out_path/ "model_epoch_{}.pth".format(epoch)) 
   #  save_checkpoint({'state_dict': model.state_dict()})
 
