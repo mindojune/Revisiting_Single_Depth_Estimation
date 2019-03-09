@@ -71,6 +71,7 @@ def main():
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch)
         train(train_loader, model, optimizer, epoch)
+
         torch.save(model.state_dict(), model_out_path/ "model_epoch_{}.pth".format(epoch)) 
   #  save_checkpoint({'state_dict': model.state_dict()})
 

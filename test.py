@@ -8,7 +8,6 @@ import loaddata
 import util
 import numpy as np
 import sobel
-from collections import OrderedDict
 
 def main():
     model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
@@ -16,7 +15,7 @@ def main():
 # model.load_state_dict(torch.load('./pretrained_model/model_senet'))
    # model = model.torch.cuda()
     model.load_state_dict(torch.load('model_output/model_epoch_4.pth'))
-    test_loader = loaddata.getTestingData(1)
+   test_loader = loaddata.getTestingData(1)
     test(test_loader, model, 0.25)
 
 
@@ -120,7 +119,6 @@ def define_model(is_resnet, is_densenet, is_senet):
         model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
 
     return model   
-
 def edge_detection(depth):
     get_edge = sobel.Sobel().cuda()
 
