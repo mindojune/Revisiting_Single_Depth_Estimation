@@ -8,14 +8,24 @@ import loaddata
 import util
 import numpy as np
 import sobel
+from pathlib import Path
+import os
 
 def main():
-    model = define_model(is_resnet=True, is_densenet=False, is_senet=False)
-   # model = torch.nn.DataParallel(model).cuda()
-# model.load_state_dict(torch.load('./pretrained_model/model_senet'))
-   # model = model.torch.cuda()
-    model.load_state_dict(torch.load('model_output/model_epoch_4.pth'))
-   test_loader = loaddata.getTestingData(1)
+    global is_resnet
+    global is_densenet
+    global is_senet
+    global pretrain_logical
+    is_resnet=True
+    is_densenet= False
+    is_senet= False
+    pretrain_logical = False
+    model = define_model()
+    # model = torch.nn.DataParallel(model).cuda()
+    # model.load_state_dict(torch.load('./pretrained_model/model_senet'))
+    model = model.cuda().float()
+    model.load_state_dict(torch.load('model_output/resnet_untrained/model_epoch_4.pth'))
+    test_loader = loaddata.getTestingData(1)
     test(test_loader, model, 0.25)
 
 
@@ -70,6 +80,8 @@ def test(test_loader, model, thre):
         Pe += P
         Re += R
         Fe += F
+        print('Epoch: [{0}/{1}]\t' .format( i, len(test_loader)))    
+        
 
     Av = Ae / totalNumber
     Pv = Pe / totalNumber
@@ -83,30 +95,36 @@ def test(test_loader, model, thre):
     print(averageError)
 
     if is_resnet:
-       if pretrained: 
+       if pretrain_logical: 
            save_name = 'resnet_pretrained'
        else:
            save_name = 'renet_untrained'
     elif is_densenet:
-       if pretrained:
+       if pretrain_logical:
            save_name = 'densenet_pretrained'
        else:
            save_name = 'densenet_untrained'
     else:
-       if pretrained:
+       if pretrain_logical:
            save_name = 'senet_pretrained'
        else:
            save_name = 'senet_untrained'
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    result_out_path = Path(dir_path +'/csvs')
+    if not result_out_path.exists():
+        result_out_path.mkdir()
+
     with open('csvs/'+save_name+'.csv', 'w') as sub:
-        sub.write('RV', str(Rv) + '\n')
-        sub.write('FV', str(Fv) + '\n')
-        sub.write('RMSE', str(averageError['RMSE'])  + '\n')
+        sub.write('RV' + str(Rv) + '\n')
+        sub.write('FV' + str(Fv) + '\n')
+        sub.write('RMSE'+ str(averageError['RMSE'])  + '\n')
     print('Done!') 
 
 
-def define_model(is_resnet, is_densenet, is_senet):
+def define_model():
     if is_resnet:
-        original_model = resnet.resnet50(pretrained = False)
+        original_model = resnet.resnet50(pretrained = pretrain_logical)
         Encoder = modules.E_resnet(original_model) 
         model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
     if is_densenet:
