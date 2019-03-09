@@ -1,0 +1,24 @@
+#!/bin/sh
+#PBS -S /bin/sh
+#PBS -N test.py running
+#PBS -l mem=1gb,walltime=5:00:00
+#PBS -A engin_fluxg
+#PBS -q fluxg
+#PBS -M unghee@umich.edu
+#PBS -m abe
+#PBS -j oe
+#PBS -V
+
+module load python-anaconda3/latest-3.6
+source activate dlcourse
+module load cuda/9.1
+
+#
+echo "I ran on:"
+cat $PBS_NODEFILE
+#
+
+cd $PBS_O_WORKDIR
+
+# run file
+python test.py
