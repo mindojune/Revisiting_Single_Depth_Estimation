@@ -56,8 +56,8 @@ def main():
         batch_size = 32
     else:
         model = model.cuda()
-        #batch_size = 8
-        batch_size = 11
+        batch_size = 4
+        #batch_size = 11
 
     cudnn.benchmark = True
     optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
@@ -66,10 +66,10 @@ def main():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_out_path = dir_path + '/model_output'
     model_out_path = Path(model_out_path)
+    if not model_out_path.exists():
+        model_out_path.mkdir()
     for epoch in range(args.start_epoch, args.epochs):
         adjust_learning_rate(optimizer, epoch)
-        if not model_out_path.exists():
-           model_out_path.mkdir()
         train(train_loader, model, optimizer, epoch)
         torch.save(model.state_dict(), model_out_path/ "model_epoch_{}.pth".format(epoch)) 
   #  save_checkpoint({'state_dict': model.state_dict()})
@@ -138,7 +138,8 @@ def train(train_loader, model, optimizer, epoch):
  
 
 def adjust_learning_rate(optimizer, epoch):
-    lr = args.lr * (0.1 ** (epoch // 5))
+    #lr = args.lr * (0.1 ** (epoch // 5))
+    lr = args.lr * (0.3 ** (epoch // 5))
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
