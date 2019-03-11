@@ -14,6 +14,9 @@ from models import modules, net, resnet, densenet, senet
 import os
 from pathlib import Path
 
+from models_resnet import Resnet18_md, Resnet18Encoder
+
+
 parser = argparse.ArgumentParser(description='PyTorch DenseNet Training')
 parser.add_argument('--epochs', default=5, type=int,
                     help='number of total epochs to run')
@@ -27,10 +30,25 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
 
 
 def define_model(is_resnet, is_densenet, is_senet):
+    use18 = True # True
     if is_resnet:
-        original_model = resnet.resnet50(pretrained = True)
-        Encoder = modules.E_resnet(original_model) 
-        model = net.model(Encoder, num_features=2048, block_channel = [256, 512, 1024, 2048])
+        if not use18:
+            original_model = resnet.resnet18(pretrained = True)
+            Encoder = modules.E_resnet(original_model) 
+            model = net.model(Encoder, num_features=512, block_channel = [64, 128, 256, 512])
+        else:
+            stereoModel = Resnet18Encoder(3)  
+            model_dict = stereoModel.state_dict()
+            encoder_dict = torch.load('/home/doragu/Dropbox/school/michigan/19w/3d-estimation-cnn/data/models/monodepth_resnet18_001.pth',map_location='cpu' )
+            new_dict = {}
+            for key in encoder_dict:
+                if key in model_dict:
+                    new_dict[key] = encoder_dict[key]
+
+            stereoModel.load_state_dict(new_dict )
+            Encoder = stereoModel
+            model = net.model(Encoder, num_features=512, block_channel = [64, 128, 256, 512])      
+          
     if is_densenet:
         original_model = densenet.densenet161(pretrained=True)
         Encoder = modules.E_densenet(original_model)
@@ -55,7 +73,7 @@ def main():
         model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
         batch_size = 32
     else:
-        model = model.cuda()
+        #model = model.cuda()
         batch_size = 4
         #batch_size = 11
 
@@ -84,23 +102,27 @@ def train(train_loader, model, optimizer, epoch):
     model.train()
 
     cos = nn.CosineSimilarity(dim=1, eps=0)
-    get_gradient = sobel.Sobel().cuda()
+    get_gradient = sobel.Sobel()#.cuda()
 
     end = time.time()
     for i, sample_batched in enumerate(train_loader):
         image, depth = sample_batched['image'], sample_batched['depth']
 
         #depth = depth.cuda(async=True)
-        depth = depth.cuda()
-        image = image.cuda()
+        #depth = depth.cuda()
+        #image = image.cuda()
         image = torch.autograd.Variable(image)
         depth = torch.autograd.Variable(depth)
 
-        ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float().cuda()
+        ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3))#.float().cuda()
         ones = torch.autograd.Variable(ones)
         optimizer.zero_grad()
 
         output = model(image)
+        output = torch.nn.functional.upsample(output, size=[depth.size(2),depth.size(3)], mode='bilinear')
+        #print(image.size())
+        #print(output.size())
+        #gprint(depth.size())
 
         depth_grad = get_gradient(depth)
         output_grad = get_gradient(output)
@@ -119,7 +141,9 @@ def train(train_loader, model, optimizer, epoch):
         loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
         loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
         loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
-
+        
+        # TODO: grad_dx, grad_dy being negative: is it ok or is something wrong here?
+        #print("losses:",loss_depth, loss_dx, loss_dy, loss_normal)
         loss = loss_depth + loss_normal + (loss_dx + loss_dy)
 
         #losses.update(loss.data[0], image.size(0))
