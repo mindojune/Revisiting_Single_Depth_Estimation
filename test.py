@@ -144,7 +144,7 @@ def define_model():
 
         stereoModel = Resnet18Encoder(3)  
         model_dict = stereoModel.state_dict()
-        encoder_dict = torch.load('/home/doragu/Dropbox/school/michigan/19w/3d-estimation-cnn/data/models/monodepth_resnet18_001.pth',map_location='cpu' )
+        encoder_dict = torch.load('./models/monodepth_resnet18_001.pth',map_location='cpu' )
         new_dict = {}
         for key in encoder_dict:
             if key in model_dict:
