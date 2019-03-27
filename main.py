@@ -25,10 +25,10 @@ import matplotlib.pyplot as plt
 
 def define_test_model():
 	#archs = {"Resnet", "Densenet", "SEnet", "Custom"}
-	is_resnet = model.arch == "Resnet" #True #False #True
-	is_densenet = model.arch == "Densenet" # #False #True #False # False
-	is_senet = model.arch == "SEnet" # True #False #True #False
-	is_custom = model.arch == "Custom"
+	is_resnet = args.arch == "Resnet" #True #False #True
+	is_densenet = args.arch == "Densenet" # #False #True #False # False
+	is_senet = args.arch == "SEnet" # True #False #True #False
+	is_custom = args.arch == "Custom"
 
 	if is_resnet:
 		#original_model = resnet.resnet18(pretrained = pretrain_logical)
@@ -65,10 +65,10 @@ def define_test_model():
 
 def define_train_model():
 	#archs = {"Resnet", "Densenet", "SEnet", "Custom"}
-	is_resnet = model.arch == "Resnet" #True #False #True
-	is_densenet = model.arch == "Densenet" # #False #True #False # False
-	is_senet = model.arch == "SEnet" # True #False #True #False
-	is_custom = model.arch == "Custom"
+	is_resnet = args.arch == "Resnet" #True #False #True
+	is_densenet = args.arch == "Densenet" # #False #True #False # False
+	is_senet = args.arch == "SEnet" # True #False #True #False
+	is_custom = args.arch == "Custom"
 
 	use18 = True # True
 	if is_resnet:
@@ -389,7 +389,7 @@ def main():
 		cudnn.benchmark = True
 		optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
-		train_loader = loaddata.getTrainingData(batch_size)
+		train_loader = loaddata.getStyleTrainingData(batch_size)
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		model_out_path = dir_path + '/model_output'
 		model_out_path = Path(model_out_path)
