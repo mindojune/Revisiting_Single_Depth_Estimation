@@ -390,6 +390,7 @@ def main():
 		cudnn.benchmark = True
 		optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
+		#train_loader = loaddata.getTrainingData(batch_size)
 		train_loader = loaddata.getStyleTrainingData(batch_size)
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		model_out_path = dir_path + '/model_output'
