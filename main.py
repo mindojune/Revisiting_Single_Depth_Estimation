@@ -140,6 +140,7 @@ def visualize_image(image, b_output, output, depth):
 def test(thre):
 	model = define_test_model()
 	test_loader = loaddata.getTestingData(1)
+	#test_loader = loaddata.getStyleTestingData(1)
 	
 	model.eval()
 
