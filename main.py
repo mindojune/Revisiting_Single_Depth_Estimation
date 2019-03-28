@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 # 1. program argument full specification (what options to allow) and implementation: 1V
 # 2. write code so that if there is no such model file, grab it from url 
 # 3. In training saving + continued training full specification and implementation
+use_cuda = torch.cuda.is_available()
 
 def define_test_model():
 	#archs = {"Resnet", "Densenet", "SEnet", "Custom"}
@@ -102,7 +103,10 @@ def define_train_model():
 	return model
 
 def edge_detection(depth):
-	get_edge = sobel.Sobel()#.cuda()
+	if use_cuda:
+		get_edge = sobel.Sobel().cuda()
+	else:
+		get_edge = sobel.Sobel()
 
 	edge_xy = get_edge(depth)
 	edge_sobel = torch.pow(edge_xy[:, 0, :, :], 2) + \
@@ -159,11 +163,14 @@ def test(thre):
 			image, depth = sample_batched['image'], sample_batched['depth']
 
 			# depth = depth.cuda(async=True)
-			#depth = depth.cuda()
-			#image = image.cuda()
 
-			#image = torch.autograd.Variable(image, volatile=True)
-			#depth = torch.autograd.Variable(depth, volatile=True)
+			if use_cuda:
+				depth = depth.cuda()
+				image = image.cuda()
+			else:
+				pass
+				#image = torch.autograd.Variable(image, volatile=True)
+				#depth = torch.autograd.Variable(depth, volatile=True)
 			
 			b_output = model(image)
 			#output = torch.nn.functional.upsample(output, size=[depth.size(2),depth.size(3)], mode='bilinear')
@@ -247,19 +254,24 @@ def train(train_loader, model, optimizer, epoch):
 	model.train()
 
 	cos = nn.CosineSimilarity(dim=1, eps=0)
-	get_gradient = sobel.Sobel()#.cuda()
+	if use_cuda:
+		get_gradient = sobel.Sobel().cuda()
+	else:
+		get_gradient = sobel.Sobel()#.cuda()
 
 	end = time.time()
 	for i, sample_batched in enumerate(train_loader):
 		image, depth = sample_batched['image'], sample_batched['depth']
 
 		#depth = depth.cuda(async=True)
-		#depth = depth.cuda()
-		#image = image.cuda()
-		image = torch.autograd.Variable(image)
-		depth = torch.autograd.Variable(depth)
+		if use_cuda:
+			depth = depth.cuda()
+			image = image.cuda()
+		else:
+			image = torch.autograd.Variable(image)
+			depth = torch.autograd.Variable(depth)
 
-		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3))#.float().cuda()
+		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float().cuda()
 		ones = torch.autograd.Variable(ones)
 		optimizer.zero_grad()
 
@@ -383,15 +395,15 @@ def main():
 			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
 			batch_size = 32
 		else:
-			#model = model.cuda()
-			batch_size = 4
+			model = model.cuda()
+			batch_size = 16
 			#batch_size = 11
 
 		cudnn.benchmark = True
 		optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
-		#train_loader = loaddata.getTrainingData(batch_size)
-		train_loader = loaddata.getStyleTrainingData(batch_size)
+		train_loader = loaddata.getTrainingData(batch_size)
+		#train_loader = loaddata.getStyleTrainingData(batch_size)
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		model_out_path = dir_path + '/model_output'
 		model_out_path = Path(model_out_path)
