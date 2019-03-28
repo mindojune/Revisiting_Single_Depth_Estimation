@@ -394,16 +394,19 @@ def main():
 		elif torch.cuda.device_count() == 4:
 			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
 			batch_size = 32
+		elif torch.cuda.device_count() == 2:
+			model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
+			batch_size = 8
 		else:
 			model = model.cuda()
-			batch_size = 16
+			batch_size = 4
 			#batch_size = 11
 
 		cudnn.benchmark = True
 		optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
-		train_loader = loaddata.getTrainingData(batch_size)
-		#train_loader = loaddata.getStyleTrainingData(batch_size)
+		#train_loader = loaddata.getTrainingData(batch_size)
+		train_loader = loaddata.getStyleTrainingData(batch_size)
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		model_out_path = dir_path + '/model_output'
 		model_out_path = Path(model_out_path)
@@ -413,7 +416,7 @@ def main():
 			adjust_learning_rate(optimizer, epoch)
 			train(train_loader, model, optimizer, epoch)
 
-			torch.save(model.state_dict(), model_out_path/ model.arch+"_model_epoch_{}.pth".format(epoch)) 
+			torch.save(model.state_dict(), model_out_path/ args.arch+"_model_epoch_{}.pth".format(epoch)) 
 
 
 if __name__ == '__main__':
