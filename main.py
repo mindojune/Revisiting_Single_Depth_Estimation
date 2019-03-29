@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 # 1. program argument full specification (what options to allow) and implementation: 1V
 # 2. write code so that if there is no such model file, grab it from url 
 # 3. In training saving + continued training full specification and implementation
-use_cuda = torch.cuda.is_available()
+use_cuda = False #torch.cuda.is_available()
 
 def define_test_model():
 	#archs = {"Resnet", "Densenet", "SEnet", "Custom"}
@@ -262,7 +262,7 @@ def train(train_loader, model, optimizer, epoch):
 	end = time.time()
 	for i, sample_batched in enumerate(train_loader):
 		image, depth = sample_batched['image'], sample_batched['depth']
-
+		#print(image.size(), depth.size()) #
 		#depth = depth.cuda(async=True)
 		if use_cuda:
 			depth = depth.cuda()
@@ -271,14 +271,14 @@ def train(train_loader, model, optimizer, epoch):
 			image = torch.autograd.Variable(image)
 			depth = torch.autograd.Variable(depth)
 
-		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float().cuda()
+		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float()#.cuda()
 		ones = torch.autograd.Variable(ones)
 		optimizer.zero_grad()
 
 		output = model(image)
 		#output = torch.nn.functional.upsample(output, size=[depth.size(2),depth.size(3)], mode='bilinear')
 		output = torch.nn.functional.interpolate(output, size=[depth.size(2),depth.size(3)], mode='bilinear', align_corners=False)
-
+		#print(output.size(), depth.size()) #
 		depth_grad = get_gradient(depth)
 		output_grad = get_gradient(output)
 		depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(depth)
@@ -387,18 +387,20 @@ def main():
 		test(threshold)
 	else:
 		model = define_train_model()
- 
-		if torch.cuda.device_count() == 8:
-			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7]).cuda()
-			batch_size = 64
-		elif torch.cuda.device_count() == 4:
-			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
-			batch_size = 32
-		elif torch.cuda.device_count() == 2:
-			model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
-			batch_size = 8
+		
+		if use_cuda:
+			if torch.cuda.device_count() == 8:
+				model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7]).cuda()
+				batch_size = 64
+			elif torch.cuda.device_count() == 4:
+				model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
+				batch_size = 32
+			elif torch.cuda.device_count() == 2:
+				model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
+				batch_size = 8
 		else:
-			model = model.cuda()
+			pass
+			#model = model.cuda()
 			batch_size = 4
 			#batch_size = 11
 

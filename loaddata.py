@@ -100,7 +100,7 @@ class depthStyleDataset(Dataset):
         depth = Image.open(depth_name)
         image = matplotlib.image.imread(image_name)
         #depth = matplotlib.image.imread(depth_name)
-
+        #print(np.array(depth)[2])
         with torch.no_grad():
                 output = single_stylize(self.style_model, image)
 
@@ -116,6 +116,7 @@ class depthStyleDataset(Dataset):
 
     def __len__(self):
         return len(self.frame)
+
 
 def getStyleTrainingData(batch_size=64):
     __imagenet_pca = {
@@ -150,7 +151,7 @@ def getStyleTrainingData(batch_size=64):
                                         )
 
     dataloader_training = DataLoader(transformed_training, batch_size,
-                                     shuffle=True, num_workers=4, pin_memory=False)
+                                     shuffle=True, num_workers=1, pin_memory=False)
 
     return dataloader_training
 
@@ -172,7 +173,7 @@ def getStyleTestingData(batch_size=64):
                                        )
 
     dataloader_testing = DataLoader(transformed_testing, batch_size,
-                                    shuffle=False, num_workers=0, pin_memory=False)
+                                    shuffle=False, num_workers=1, pin_memory=False)
 
     return dataloader_testing
 
