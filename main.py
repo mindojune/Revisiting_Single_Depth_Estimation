@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 # 1. program argument full specification (what options to allow) and implementation: 1V
 # 2. write code so that if there is no such model file, grab it from url 
 # 3. In training saving + continued training full specification and implementation
-use_cuda = False #torch.cuda.is_available()
+use_cuda = torch.cuda.is_available()
 
 def define_test_model():
 	#archs = {"Resnet", "Densenet", "SEnet", "Custom"}
@@ -41,15 +41,26 @@ def define_test_model():
 		encoder_dict = torch.load('./models/monodepth_resnet18_001.pth',map_location='cpu' )
 		new_dict = {}
 		for key in encoder_dict:
+			# print(key)  
 			if key in model_dict:
 				new_dict[key] = encoder_dict[key]
 
-		stereoModel.load_state_dict(new_dict )
-		
+		stereoModel.load_state_dict(new_dict )		
 		Encoder = stereoModel
-
 		model = net.model(Encoder, num_features=512, block_channel = [64, 128, 256, 512])
-
+		print("Loading a model...")
+		print("/model_epoch_{}.pth".format(str(args.load_epoch)))
+		model = model.cuda().float()
+		#print(stereoModel)
+		#print(model)
+		
+		model_dict = torch.load(args.load_dir + "/original_model_epoch_{}.pth".format(str(args.load_epoch)) )
+		new_dict = model_dict
+		#new_dict = {}
+		#for key in model_dict:
+		#	new_dict[key[7:]] = model_dict[key]
+		model.load_state_dict(new_dict)
+		
 	if is_densenet:
 		# TODO: no dot bug
 		original_model = densenet.densenet161(pretrained=True)
@@ -171,11 +182,15 @@ def test(thre):
 				pass
 				#image = torch.autograd.Variable(image, volatile=True)
 				#depth = torch.autograd.Variable(depth, volatile=True)
-			
+			#print(image.size())
+			#print(image[0][3])
+			image = image[:,0:3,:,:]#image.squeeze()
+			#print(image.size())
 			b_output = model(image)
+			
 			#output = torch.nn.functional.upsample(output, size=[depth.size(2),depth.size(3)], mode='bilinear')
 			output = torch.nn.functional.interpolate(b_output, size=[depth.size(2),depth.size(3)], mode='bilinear', align_corners=False)
-			visualize_image(image, b_output, output, depth)
+			#visualize_image(image, b_output, output, depth)
 
 			depth_edge = edge_detection(depth)
 			output_edge = edge_detection(output)
@@ -262,7 +277,7 @@ def train(train_loader, model, optimizer, epoch):
 	end = time.time()
 	for i, sample_batched in enumerate(train_loader):
 		image, depth = sample_batched['image'], sample_batched['depth']
-		#print(image.size(), depth.size()) #
+
 		#depth = depth.cuda(async=True)
 		if use_cuda:
 			depth = depth.cuda()
@@ -271,14 +286,14 @@ def train(train_loader, model, optimizer, epoch):
 			image = torch.autograd.Variable(image)
 			depth = torch.autograd.Variable(depth)
 
-		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float()#.cuda()
+		ones = torch.ones(depth.size(0), 1, depth.size(2),depth.size(3)).float().cuda()
 		ones = torch.autograd.Variable(ones)
 		optimizer.zero_grad()
 
 		output = model(image)
 		#output = torch.nn.functional.upsample(output, size=[depth.size(2),depth.size(3)], mode='bilinear')
 		output = torch.nn.functional.interpolate(output, size=[depth.size(2),depth.size(3)], mode='bilinear', align_corners=False)
-		#print(output.size(), depth.size()) #
+
 		depth_grad = get_gradient(depth)
 		output_grad = get_gradient(output)
 		depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(depth)
@@ -371,7 +386,10 @@ def main():
 	parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
 	parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
 						help='weight decay (default: 1e-4)')
-		
+	parser.add_argument('--load_epoch', default="4", #default="./models/monodepth_resnet18_001.pth", 
+						type=str, help='choice of epch')	
+	parser.add_argument('--load_dir', default="./model_output", #default="./models/monodepth_resnet18_001.pth", 
+						type=str, help='choice of output')	
 	global args
 	args = parser.parse_args()
 	modes = {"test", "train"}
@@ -387,28 +405,26 @@ def main():
 		test(threshold)
 	else:
 		model = define_train_model()
-		
-		if use_cuda:
-			if torch.cuda.device_count() == 8:
-				model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7]).cuda()
-				batch_size = 64
-			elif torch.cuda.device_count() == 4:
-				model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
-				batch_size = 32
-			elif torch.cuda.device_count() == 2:
-				model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
-				batch_size = 8
+ 
+		if torch.cuda.device_count() == 8:
+			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7]).cuda()
+			batch_size = 64
+		elif torch.cuda.device_count() == 4:
+			model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3]).cuda()
+			batch_size = 32
+		elif torch.cuda.device_count() == 2:
+			model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
+			batch_size = 8
 		else:
-			pass
-			#model = model.cuda()
+			model = model.cuda()
 			batch_size = 4
 			#batch_size = 11
 
 		cudnn.benchmark = True
 		optimizer = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
 
-		#train_loader = loaddata.getTrainingData(batch_size)
-		train_loader = loaddata.getStyleTrainingData(batch_size)
+		train_loader = loaddata.getTrainingData(batch_size)
+		#train_loader = loaddata.getStyleTrainingData(batch_size)
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		model_out_path = dir_path + '/model_output'
 		model_out_path = Path(model_out_path)
@@ -418,7 +434,7 @@ def main():
 			adjust_learning_rate(optimizer, epoch)
 			train(train_loader, model, optimizer, epoch)
 
-			torch.save(model.state_dict(), model_out_path/ args.arch+"_model_epoch_{}.pth".format(epoch)) 
+			torch.save(model.state_dict(), model_out_path/"_model_epoch_{}.pth".format(epoch)) 
 
 
 if __name__ == '__main__':
